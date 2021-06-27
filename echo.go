@@ -183,40 +183,16 @@ func (e *Echo) Routers() map[string]*Router {
 
 func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 	he, ok := err.(*HTTPError)
-	if ok {
-		if he.Internal != nil {
-			if herr, ok := he.Internal.(*HTTPError); ok {
-				he = herr
-			}
-		}
-	} else {
+	if !ok {
 		he = &HTTPError{
 			Code:    http.StatusInternalServerError,
 			Message: http.StatusText(http.StatusInternalServerError),
 		}
 	}
 
-	// Issue #1426
-	code := he.Code
-	message := he.Message
-	if m, ok := he.Message.(string); ok {
-		if e.Debug {
-			message = Map{"message": m, "error": err.Error()}
-		} else {
-			message = Map{"message": m}
-		}
-	}
-
-	// Send response
-	if !c.Response().Committed {
-		if c.Request().Method == http.MethodHead { // Issue #608
-			err = c.NoContent(he.Code)
-		} else {
-			err = c.JSON(code, message)
-		}
-		if err != nil {
-			e.Logger.Error(err)
-		}
+	err = c.JSON(he.Code, he.Message)
+	if err != nil {
+		e.Logger.Error(err)
 	}
 }
 
