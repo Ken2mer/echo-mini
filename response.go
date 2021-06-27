@@ -22,6 +22,14 @@ func (r *Response) Header() http.Header {
 	return r.Writer.Header()
 }
 
+func (r *Response) Before(fn func()) {
+	r.beforeFuncs = append(r.beforeFuncs, fn)
+}
+
+func (r *Response) After(fn func()) {
+	r.afterFuncs = append(r.afterFuncs, fn)
+}
+
 func (r *Response) WriteHeader(code int) {
 	if r.Committed {
 		r.echo.Logger.Warn("response already committed")
@@ -48,4 +56,8 @@ func (r *Response) Write(b []byte) (n int, err error) {
 		fn()
 	}
 	return
+}
+
+func (r *Response) Flush() {
+	r.Writer.(http.Flusher).Flush()
 }
