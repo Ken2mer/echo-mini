@@ -1,0 +1,51 @@
+package echo
+
+import "net/http"
+
+type (
+	Response struct {
+		echo        *Echo
+		beforeFuncs []func()
+		afterFuncs  []func()
+		Writer      http.ResponseWriter
+		Status      int
+		Size        int64
+		Committed   bool
+	}
+)
+
+func NewResponse(w http.ResponseWriter, e *Echo) (r *Response) {
+	return &Response{Writer: w, echo: e}
+}
+
+func (r *Response) Header() http.Header {
+	return r.Writer.Header()
+}
+
+func (r *Response) WriteHeader(code int) {
+	if r.Committed {
+		r.echo.Logger.Warn("response already committed")
+		return
+	}
+	r.Status = code
+	for _, fn := range r.beforeFuncs {
+		fn()
+	}
+	r.Writer.WriteHeader(r.Status)
+	r.Committed = true
+}
+
+func (r *Response) Write(b []byte) (n int, err error) {
+	if !r.Committed {
+		if r.Status == 0 {
+			r.Status = http.StatusOK
+		}
+		r.WriteHeader(r.Status)
+	}
+	n, err = r.Writer.Write(b)
+	r.Size += int64(n)
+	for _, fn := range r.afterFuncs {
+		fn()
+	}
+	return
+}
