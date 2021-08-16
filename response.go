@@ -9,8 +9,8 @@ type (
 		afterFuncs  []func()
 		Writer      http.ResponseWriter
 		Status      int
-		Size        int64
-		Committed   bool
+		// Size        int64
+		Committed bool
 	}
 )
 
@@ -31,16 +31,16 @@ func (r *Response) After(fn func()) {
 }
 
 func (r *Response) WriteHeader(code int) {
-	if r.Committed {
-		r.echo.Logger.Warn("response already committed")
-		return
-	}
+	// if r.Committed {
+	// 	r.echo.Logger.Warn("response already committed")
+	// 	return
+	// }
 	r.Status = code
 	for _, fn := range r.beforeFuncs {
 		fn()
 	}
 	r.Writer.WriteHeader(r.Status)
-	r.Committed = true
+	// r.Committed = true
 }
 
 func (r *Response) Write(b []byte) (n int, err error) {
@@ -51,7 +51,7 @@ func (r *Response) Write(b []byte) (n int, err error) {
 		r.WriteHeader(r.Status)
 	}
 	n, err = r.Writer.Write(b)
-	r.Size += int64(n)
+	// r.Size += int64(n)
 	for _, fn := range r.afterFuncs {
 		fn()
 	}

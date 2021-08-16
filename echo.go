@@ -11,34 +11,32 @@ type (
 	Echo struct {
 		// common
 
-		// startupMutex is mutex to lock Echo instance access during server configuration and startup. Useful for to get
-		// listener address info (on which interface/port was listener binded) without having data races.
-		startupMutex sync.RWMutex
+		// startupMutex sync.RWMutex
 		// StdLogger        *stdLog.Logger
 		// colorer          *color.Color
 		// premiddleware    []MiddlewareFunc
 		// middleware       []MiddlewareFunc
-		maxParam *int
-		router   *Router
-		routers  map[string]*Router
+		// maxParam *int
+		router  *Router
+		// routers map[string]*Router
 		// notFoundHandler  HandlerFunc
-		pool        sync.Pool
-		Server      *http.Server
-		TLSServer   *http.Server
+		pool sync.Pool
+		// Server *http.Server
+		// TLSServer   *http.Server
 		Listener    net.Listener
 		TLSListener net.Listener
 		// AutoTLSManager   autocert.Manager
 		DisableHTTP2 bool
 		Debug        bool
-		HideBanner   bool
-		HidePort     bool
+		// HideBanner   bool
+		// HidePort bool
 		// HTTPErrorHandler HTTPErrorHandler
 		// Binder           Binder
 		// Validator        Validator
 		// Renderer         Renderer
 		Logger Logger
 		// IPExtractor      IPExtractor
-		ListenerNetwork string
+		// ListenerNetwork string
 	}
 
 	Route struct {
@@ -138,15 +136,15 @@ const (
 
 func New() (e *Echo) {
 	e = &Echo{
-		Server:    new(http.Server),
-		TLSServer: new(http.Server),
+		// Server: new(http.Server),
+		// TLSServer: new(http.Server),
 		// AutoTLSManager: autocert.Manager{
 		// 	Prompt: autocert.AcceptTOS,
 		// },
 		// Logger:          log.New("echo"),
 		// colorer:         color.New(),
-		maxParam:        new(int),
-		ListenerNetwork: "tcp",
+		// maxParam:        new(int),
+		// ListenerNetwork: "tcp",
 	}
 	// e.Server.Handler = e
 	// e.TLSServer.Handler = e
@@ -158,7 +156,7 @@ func New() (e *Echo) {
 		return e.NewContext(nil, nil)
 	}
 	e.router = NewRouter(e)
-	e.routers = map[string]*Router{}
+	// e.routers = map[string]*Router{}
 	return
 }
 
@@ -166,10 +164,10 @@ func (e *Echo) NewContext(r *http.Request, w http.ResponseWriter) Context {
 	return &context{
 		request:  r,
 		response: NewResponse(w, e),
-		store:    make(Map),
-		echo:     e,
-		pvalues:  make([]string, *e.maxParam),
-		// handler:  NotFoundHandler,
+		// store:    make(Map),
+		echo: e,
+		// pvalues:  make([]string, *e.maxParam),
+		// handler: NotFoundHandler,
 	}
 }
 
@@ -177,9 +175,9 @@ func (e *Echo) Router() *Router {
 	return e.router
 }
 
-func (e *Echo) Routers() map[string]*Router {
-	return e.routers
-}
+// func (e *Echo) Routers() map[string]*Router {
+// 	return e.routers
+// }
 
 func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 	he, ok := err.(*HTTPError)

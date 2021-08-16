@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"sync"
 )
 
 type (
@@ -188,15 +187,15 @@ type (
 	context struct {
 		request  *http.Request
 		response *Response
-		path     string
-		pnames   []string
-		pvalues  []string
-		query    url.Values
-		// handler  HandlerFunc
-		store  Map
-		echo   *Echo
-		logger Logger
-		lock   sync.RWMutex
+		// path     string
+		// pnames   []string
+		// pvalues  []string
+		query url.Values
+		// handler HandlerFunc
+		// store   Map
+		echo *Echo
+		// logger   Logger
+		// lock     sync.RWMutex
 	}
 )
 
