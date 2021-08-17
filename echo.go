@@ -51,6 +51,10 @@ type (
 		Internal error       `json:"-"` // Stores the error returned by an external dependency
 	}
 
+	MiddlewareFunc func(HandlerFunc) HandlerFunc
+	HandlerFunc    func(Context) error
+	// HTTPErrorHandler func(error, Context)
+
 	Map map[string]interface{}
 )
 
@@ -194,9 +198,53 @@ func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 	}
 }
 
+func (e *Echo) add(host, method, path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
+	// name := handlerName(handler)
+	router := e.findRouter(host)
+	router.Add(method, path, func(c Context) error {
+		h := applyMiddleware(handler, middleware...)
+		return h(c)
+	})
+	r := &Route{
+		Method: method,
+		Path:   path,
+		// Name:   name,
+	}
+	e.router.routes[method+path] = r
+	return r
+}
+
+func (e *Echo) Add(method, path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
+	return e.add("", method, path, handler, middleware...)
+}
+
+func (e *Echo) Routes() []*Route {
+	routes := make([]*Route, 0, len(e.router.routes))
+	for _, v := range e.router.routes {
+		routes = append(routes, v)
+	}
+	return routes
+}
+
 func (he *HTTPError) Error() string {
 	if he.Internal == nil {
 		return fmt.Sprintf("code=%d, message=%v", he.Code, he.Message)
 	}
 	return fmt.Sprintf("code=%d, message=%v, internal=%v", he.Code, he.Message, he.Internal)
+}
+
+func (e *Echo) findRouter(host string) *Router {
+	// if len(e.routers) > 0 {
+	// 	if r, ok := e.routers[host]; ok {
+	// 		return r
+	// 	}
+	// }
+	return e.router
+}
+
+func applyMiddleware(h HandlerFunc, middleware ...MiddlewareFunc) HandlerFunc {
+	// for i := len(middleware) - 1; i >= 0; i-- {
+	// 	h = middleware[i](h)
+	// }
+	return h
 }

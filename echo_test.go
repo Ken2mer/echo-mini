@@ -23,3 +23,33 @@ func TestEcho(t *testing.T) {
 	e.DefaultHTTPErrorHandler(errors.New("error"), c)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }
+
+func TestEchoRoutes(t *testing.T) {
+	e := New()
+	routes := []*Route{
+		{http.MethodGet, "/users/:user/events", ""},
+		{http.MethodGet, "/users/:user/events/public", ""},
+		{http.MethodPost, "/repos/:owner/:repo/git/refs", ""},
+		{http.MethodPost, "/repos/:owner/:repo/git/tags", ""},
+	}
+	for _, r := range routes {
+		e.Add(r.Method, r.Path, func(c Context) error {
+			return c.String(http.StatusOK, "OK")
+		})
+	}
+
+	if assert.Equal(t, len(routes), len(e.Routes())) {
+		for _, r := range e.Routes() {
+			found := false
+			for _, rr := range routes {
+				if r.Method == rr.Method && r.Path == rr.Path {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("Route %s %s not found", r.Method, r.Path)
+			}
+		}
+	}
+}

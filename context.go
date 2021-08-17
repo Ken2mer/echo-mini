@@ -110,7 +110,7 @@ type (
 		// 	HTMLBlob(code int, b []byte) error
 
 		// String sends a string response with status code.
-		// 	String(code int, s string) error
+		String(code int, s string) error
 
 		// JSON sends a JSON response with status code.
 		JSON(code int, i interface{}) error
@@ -227,6 +227,10 @@ func (c *context) QueryParams() url.Values {
 	return c.query
 }
 
+func (c *context) String(code int, s string) (err error) {
+	return c.Blob(code, MIMETextPlainCharsetUTF8, []byte(s))
+}
+
 func (c *context) json(code int, i interface{}, indent string) error {
 	enc := json.NewEncoder(c.response)
 	if indent != "" {
@@ -243,6 +247,13 @@ func (c *context) JSON(code int, i interface{}) (err error) {
 		indent = defaultIndent
 	}
 	return c.json(code, i, indent)
+}
+
+func (c *context) Blob(code int, contentType string, b []byte) (err error) {
+	c.writeContentType(contentType)
+	c.response.WriteHeader(code)
+	_, err = c.response.Write(b)
+	return
 }
 
 func (c *context) NoContent(code int) error {
