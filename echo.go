@@ -30,7 +30,7 @@ type (
 		Debug        bool
 		// HideBanner   bool
 		// HidePort bool
-		// HTTPErrorHandler HTTPErrorHandler
+		HTTPErrorHandler HTTPErrorHandler
 		// Binder           Binder
 		// Validator        Validator
 		// Renderer         Renderer
@@ -51,9 +51,9 @@ type (
 		Internal error       `json:"-"` // Stores the error returned by an external dependency
 	}
 
-	MiddlewareFunc func(HandlerFunc) HandlerFunc
-	HandlerFunc    func(Context) error
-	// HTTPErrorHandler func(error, Context)
+	MiddlewareFunc   func(HandlerFunc) HandlerFunc
+	HandlerFunc      func(Context) error
+	HTTPErrorHandler func(error, Context)
 
 	Map map[string]interface{}
 )
@@ -201,7 +201,7 @@ func New() (e *Echo) {
 	}
 	// e.Server.Handler = e
 	// e.TLSServer.Handler = e
-	// e.HTTPErrorHandler = e.DefaultHTTPErrorHandler
+	e.HTTPErrorHandler = e.DefaultHTTPErrorHandler
 	// e.Binder = &DefaultBinder{}
 	// e.Logger.SetLevel(log.ERROR)
 	// e.StdLogger = stdLog.New(e.Logger.Output(), e.Logger.Prefix()+": ", 0)
@@ -301,7 +301,7 @@ func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Execute chain
 	if err := h(c); err != nil {
-		// e.HTTPErrorHandler(err, c)
+		e.HTTPErrorHandler(err, c)
 	}
 
 	// Release context

@@ -206,6 +206,10 @@ func (r *Router) Find(method, path string, c Context) {
 				break
 			}
 		}
+
+		// Not found
+		break
+
 	}
 
 	// if currentNode == nil && previousBestMatchNode == nil {

@@ -73,6 +73,25 @@ func TestEchoRoutes(t *testing.T) {
 	}
 }
 
+func TestEchoNotFound(t *testing.T) {
+	e := New()
+	req := httptest.NewRequest(http.MethodGet, "/files", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestEchoMethodNotAllowed(t *testing.T) {
+	e := New()
+	e.GET("/", func(c Context) error {
+		return c.String(http.StatusOK, "Echo!")
+	})
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
+}
+
 func testMethod(t *testing.T, method, path string, e *Echo) {
 	p := reflect.ValueOf(path)
 	h := reflect.ValueOf(func(c Context) error {
