@@ -61,3 +61,12 @@ func (r *Response) Write(b []byte) (n int, err error) {
 func (r *Response) Flush() {
 	r.Writer.(http.Flusher).Flush()
 }
+
+func (r *Response) reset(w http.ResponseWriter) {
+	// r.beforeFuncs = nil
+	// r.afterFuncs = nil
+	r.Writer = w
+	// r.Size = 0
+	// r.Status = http.StatusOK
+	// r.Committed = false
+}

@@ -164,7 +164,7 @@ type (
 		// 	Error(err error)
 
 		// Handler returns the matched handler by router.
-		// 	Handler() HandlerFunc
+		Handler() HandlerFunc
 
 		// SetHandler sets the matched handler by router.
 		// 	SetHandler(h HandlerFunc)
@@ -181,7 +181,7 @@ type (
 		// Reset resets the context after request completes. It must be called along
 		// with `Echo#AcquireContext()` and `Echo#ReleaseContext()`.
 		// See `Echo#ServeHTTP()`
-		// 	Reset(r *http.Request, w http.ResponseWriter)
+		Reset(r *http.Request, w http.ResponseWriter)
 	}
 
 	context struct {
@@ -190,8 +190,8 @@ type (
 		// path     string
 		// pnames   []string
 		// pvalues  []string
-		query url.Values
-		// handler HandlerFunc
+		query   url.Values
+		handler HandlerFunc
 		// store   Map
 		echo *Echo
 		// logger   Logger
@@ -259,4 +259,24 @@ func (c *context) Blob(code int, contentType string, b []byte) (err error) {
 func (c *context) NoContent(code int) error {
 	c.response.WriteHeader(code)
 	return nil
+}
+
+func (c *context) Handler() HandlerFunc {
+	return c.handler
+}
+
+func (c *context) Reset(r *http.Request, w http.ResponseWriter) {
+	c.request = r
+	c.response.reset(w)
+	// c.query = nil
+	c.handler = NotFoundHandler
+	// c.store = nil
+	// c.path = ""
+	// c.pnames = nil
+	// c.logger = nil
+
+	// NOTE: Don't reset because it has to have length c.echo.maxParam at all times
+	// for i := 0; i < *c.echo.maxParam; i++ {
+	// 	c.pvalues[i] = ""
+	// }
 }

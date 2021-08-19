@@ -24,6 +24,19 @@ func TestEcho(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
+func TestEchoHandler(t *testing.T) {
+	e := New()
+
+	// HandlerFunc
+	e.GET("/ok", func(c Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
+
+	c, b := request(http.MethodGet, "/ok", e)
+	assert.Equal(t, http.StatusOK, c)
+	assert.Equal(t, "OK", b)
+}
+
 func TestEchoRoutes(t *testing.T) {
 	e := New()
 	routes := []*Route{
@@ -52,4 +65,11 @@ func TestEchoRoutes(t *testing.T) {
 			}
 		}
 	}
+}
+
+func request(method, path string, e *Echo) (int, string) {
+	req := httptest.NewRequest(method, path, nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec.Code, rec.Body.String()
 }

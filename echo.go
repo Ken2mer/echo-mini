@@ -1,6 +1,7 @@
 package echo
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -137,6 +138,55 @@ const (
 	HeaderReferrerPolicy                  = "Referrer-Policy"
 )
 
+var (
+	methods = [...]string{
+		http.MethodConnect,
+		http.MethodDelete,
+		http.MethodGet,
+		http.MethodHead,
+		http.MethodOptions,
+		http.MethodPatch,
+		http.MethodPost,
+		PROPFIND,
+		http.MethodPut,
+		http.MethodTrace,
+		REPORT,
+	}
+)
+
+// Errors
+var (
+	ErrUnsupportedMediaType        = NewHTTPError(http.StatusUnsupportedMediaType)
+	ErrNotFound                    = NewHTTPError(http.StatusNotFound)
+	ErrUnauthorized                = NewHTTPError(http.StatusUnauthorized)
+	ErrForbidden                   = NewHTTPError(http.StatusForbidden)
+	ErrMethodNotAllowed            = NewHTTPError(http.StatusMethodNotAllowed)
+	ErrStatusRequestEntityTooLarge = NewHTTPError(http.StatusRequestEntityTooLarge)
+	ErrTooManyRequests             = NewHTTPError(http.StatusTooManyRequests)
+	ErrBadRequest                  = NewHTTPError(http.StatusBadRequest)
+	ErrBadGateway                  = NewHTTPError(http.StatusBadGateway)
+	ErrInternalServerError         = NewHTTPError(http.StatusInternalServerError)
+	ErrRequestTimeout              = NewHTTPError(http.StatusRequestTimeout)
+	ErrServiceUnavailable          = NewHTTPError(http.StatusServiceUnavailable)
+	ErrValidatorNotRegistered      = errors.New("validator not registered")
+	ErrRendererNotRegistered       = errors.New("renderer not registered")
+	ErrInvalidRedirectCode         = errors.New("invalid redirect status code")
+	ErrCookieNotFound              = errors.New("cookie not found")
+	ErrInvalidCertOrKeyType        = errors.New("invalid cert or key type, must be string or []byte")
+	ErrInvalidListenerNetwork      = errors.New("invalid listener network")
+)
+
+// Error handlers
+var (
+	NotFoundHandler = func(c Context) error {
+		return ErrNotFound
+	}
+
+	MethodNotAllowedHandler = func(c Context) error {
+		return ErrMethodNotAllowed
+	}
+)
+
 func New() (e *Echo) {
 	e = &Echo{
 		// Server: new(http.Server),
@@ -197,6 +247,10 @@ func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 	}
 }
 
+func (e *Echo) GET(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
+	return e.Add(http.MethodGet, path, h, m...)
+}
+
 func (e *Echo) add(host, method, path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
 	// name := handlerName(handler)
 	router := e.findRouter(host)
@@ -225,11 +279,56 @@ func (e *Echo) Routes() []*Route {
 	return routes
 }
 
+func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Acquire context
+	c := e.pool.Get().(*context)
+	c.Reset(r, w)
+	h := NotFoundHandler
+
+	// if e.premiddleware == nil {
+	// 	e.findRouter(r.Host).Find(r.Method, GetPath(r), c)
+	// 	h = c.Handler()
+	// 	h = applyMiddleware(h, e.middleware...)
+	// } else {
+	h = func(c Context) error {
+		e.findRouter(r.Host).Find(r.Method, GetPath(r), c)
+		h := c.Handler()
+		// h = applyMiddleware(h, e.middleware...)
+		return h(c)
+	}
+	// h = applyMiddleware(h, e.premiddleware...)
+	// }
+
+	// Execute chain
+	if err := h(c); err != nil {
+		// e.HTTPErrorHandler(err, c)
+	}
+
+	// Release context
+	e.pool.Put(c)
+}
+
+func NewHTTPError(code int, message ...interface{}) *HTTPError {
+	he := &HTTPError{Code: code, Message: http.StatusText(code)}
+	if len(message) > 0 {
+		he.Message = message[0]
+	}
+	return he
+}
+
 func (he *HTTPError) Error() string {
 	if he.Internal == nil {
 		return fmt.Sprintf("code=%d, message=%v", he.Code, he.Message)
 	}
 	return fmt.Sprintf("code=%d, message=%v, internal=%v", he.Code, he.Message, he.Internal)
+}
+
+func GetPath(r *http.Request) string {
+	path := r.URL.RawPath
+	if path == "" {
+		path = r.URL.Path
+	}
+	return path
 }
 
 func (e *Echo) findRouter(host string) *Router {
