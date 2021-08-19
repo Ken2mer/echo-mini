@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,6 +38,11 @@ func TestEchoHandler(t *testing.T) {
 	assert.Equal(t, "OK", b)
 }
 
+func TestEchoGet(t *testing.T) {
+	e := New()
+	testMethod(t, http.MethodGet, "/", e)
+}
+
 func TestEchoRoutes(t *testing.T) {
 	e := New()
 	routes := []*Route{
@@ -65,6 +71,17 @@ func TestEchoRoutes(t *testing.T) {
 			}
 		}
 	}
+}
+
+func testMethod(t *testing.T, method, path string, e *Echo) {
+	p := reflect.ValueOf(path)
+	h := reflect.ValueOf(func(c Context) error {
+		return c.String(http.StatusOK, method)
+	})
+	i := interface{}(e)
+	reflect.ValueOf(i).MethodByName(method).Call([]reflect.Value{p, h})
+	_, body := request(method, path, e)
+	assert.Equal(t, method, body)
 }
 
 func request(method, path string, e *Echo) (int, string) {
