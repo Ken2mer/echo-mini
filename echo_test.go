@@ -92,6 +92,13 @@ func TestEchoMethodNotAllowed(t *testing.T) {
 	assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 }
 
+func TestEchoContext(t *testing.T) {
+	e := New()
+	c := e.pool.Get().(Context)
+	assert.IsType(t, new(context), c)
+	e.pool.Put(c)
+}
+
 func testMethod(t *testing.T, method, path string, e *Echo) {
 	p := reflect.ValueOf(path)
 	h := reflect.ValueOf(func(c Context) error {
