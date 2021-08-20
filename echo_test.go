@@ -228,3 +228,30 @@ func TestEchoShutdown(t *testing.T) {
 	err = <-errCh
 	assert.Equal(t, err.Error(), "http: Server closed")
 }
+
+func TestEchoListenerNetworkInvalid(t *testing.T) {
+	e := New()
+	e.ListenerNetwork = "unix"
+
+	// HandlerFunc
+	e.GET("/ok", func(c Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
+
+	assert.Equal(t, ErrInvalidListenerNetwork, e.Start(":1323"))
+}
+
+func TestEcho_ListenerAddr(t *testing.T) {
+	e := New()
+
+	addr := e.ListenerAddr()
+	assert.Nil(t, addr)
+
+	errCh := make(chan error)
+	go func() {
+		errCh <- e.Start(":0")
+	}()
+
+	err := waitForServerStart(e, errCh, false)
+	assert.NoError(t, err)
+}
