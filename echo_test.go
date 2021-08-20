@@ -1,11 +1,15 @@
 package echo
 
 import (
+	stdContext "context"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -97,6 +101,53 @@ func TestEchoContext(t *testing.T) {
 	c := e.pool.Get().(Context)
 	assert.IsType(t, new(context), c)
 	e.pool.Put(c)
+}
+
+func waitForServerStart(e *Echo, errChan <-chan error, isTLS bool) error {
+	ctx, cancel := stdContext.WithTimeout(stdContext.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	ticker := time.NewTicker(5 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			var addr net.Addr
+			if isTLS {
+				// addr = e.TLSListenerAddr()
+			} else {
+				addr = e.ListenerAddr()
+			}
+			if addr != nil && strings.Contains(addr.String(), ":") {
+				return nil // was started
+			}
+		case err := <-errChan:
+			if err == http.ErrServerClosed {
+				return nil
+			}
+			return err
+		}
+	}
+}
+
+func TestEchoStart(t *testing.T) {
+	e := New()
+	errChan := make(chan error)
+
+	go func() {
+		err := e.Start(":0")
+		if err != nil {
+			errChan <- err
+		}
+	}()
+
+	err := waitForServerStart(e, errChan, false)
+	assert.NoError(t, err)
+
+	assert.NoError(t, e.Close())
 }
 
 func testMethod(t *testing.T, method, path string, e *Echo) {

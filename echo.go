@@ -3,6 +3,7 @@ package echo
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 )
@@ -20,10 +21,10 @@ type (
 		router  *Router
 		// routers map[string]*Router
 		// notFoundHandler  HandlerFunc
-		pool sync.Pool
-		// Server *http.Server
+		pool   sync.Pool
+		Server *http.Server
 		// TLSServer   *http.Server
-		// Listener    net.Listener
+		Listener net.Listener
 		// TLSListener net.Listener
 		// AutoTLSManager   autocert.Manager
 		DisableHTTP2 bool
@@ -36,7 +37,7 @@ type (
 		// Renderer         Renderer
 		Logger Logger
 		// IPExtractor      IPExtractor
-		// ListenerNetwork string
+		ListenerNetwork string
 	}
 
 	Route struct {
@@ -189,7 +190,7 @@ var (
 
 func New() (e *Echo) {
 	e = &Echo{
-		// Server: new(http.Server),
+		Server: new(http.Server),
 		// TLSServer: new(http.Server),
 		// AutoTLSManager: autocert.Manager{
 		// 	Prompt: autocert.AcceptTOS,
@@ -197,7 +198,7 @@ func New() (e *Echo) {
 		// Logger:          log.New("echo"),
 		// colorer:         color.New(),
 		// maxParam:        new(int),
-		// ListenerNetwork: "tcp",
+		ListenerNetwork: "tcp",
 	}
 	// e.Server.Handler = e
 	// e.TLSServer.Handler = e
@@ -308,6 +309,73 @@ func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e.pool.Put(c)
 }
 
+func (e *Echo) Start(address string) error {
+	// e.startupMutex.Lock()
+	e.Server.Addr = address
+	if err := e.configureServer(e.Server); err != nil {
+		// e.startupMutex.Unlock()
+		return err
+	}
+	// e.startupMutex.Unlock()
+	return e.Server.Serve(e.Listener)
+}
+
+func (e *Echo) configureServer(s *http.Server) (err error) {
+	// Setup
+	// e.colorer.SetOutput(e.Logger.Output())
+	// s.ErrorLog = e.StdLogger
+	s.Handler = e
+	if e.Debug {
+		// e.Logger.SetLevel(log.DEBUG)
+	}
+
+	// if !e.HideBanner {
+	// 	e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
+	// }
+
+	if s.TLSConfig == nil {
+		if e.Listener == nil {
+			e.Listener, err = newListener(s.Addr, e.ListenerNetwork)
+			if err != nil {
+				return err
+			}
+		}
+		// if !e.HidePort {
+		// 	e.colorer.Printf("⇨ http server started on %s\n", e.colorer.Green(e.Listener.Addr()))
+		// }
+		return nil
+	}
+	// if e.TLSListener == nil {
+	// 	l, err := newListener(s.Addr, e.ListenerNetwork)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	e.TLSListener = tls.NewListener(l, s.TLSConfig)
+	// }
+	// if !e.HidePort {
+	// 	e.colorer.Printf("⇨ https server started on %s\n", e.colorer.Green(e.TLSListener.Addr()))
+	// }
+	return nil
+}
+
+func (e *Echo) ListenerAddr() net.Addr {
+	// e.startupMutex.RLock()
+	// defer e.startupMutex.RUnlock()
+	if e.Listener == nil {
+		return nil
+	}
+	return e.Listener.Addr()
+}
+
+func (e *Echo) Close() error {
+	// e.startupMutex.Lock()
+	// defer e.startupMutex.Unlock()
+	// if err := e.TLSServer.Close(); err != nil {
+	// 	return err
+	// }
+	return e.Server.Close()
+}
+
 func NewHTTPError(code int, message ...interface{}) *HTTPError {
 	he := &HTTPError{Code: code, Message: http.StatusText(code)}
 	if len(message) > 0 {
@@ -338,6 +406,21 @@ func (e *Echo) findRouter(host string) *Router {
 	// 	}
 	// }
 	return e.router
+}
+
+type tcpKeepAliveListener struct {
+	*net.TCPListener
+}
+
+func newListener(address, network string) (*tcpKeepAliveListener, error) {
+	if network != "tcp" && network != "tcp4" && network != "tcp6" {
+		return nil, ErrInvalidListenerNetwork
+	}
+	l, err := net.Listen(network, address)
+	if err != nil {
+		return nil, err
+	}
+	return &tcpKeepAliveListener{l.(*net.TCPListener)}, nil
 }
 
 func applyMiddleware(h HandlerFunc, middleware ...MiddlewareFunc) HandlerFunc {
