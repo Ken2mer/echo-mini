@@ -167,3 +167,41 @@ func request(method, path string, e *Echo) (int, string) {
 	e.ServeHTTP(rec, req)
 	return rec.Code, rec.Body.String()
 }
+
+func TestHTTPError(t *testing.T) {
+	t.Run("non-internal", func(t *testing.T) {
+		err := NewHTTPError(http.StatusBadRequest, map[string]interface{}{
+			"code": 12,
+		})
+
+		assert.Equal(t, "code=400, message=map[code:12]", err.Error())
+	})
+	// t.Run("internal", func(t *testing.T) {
+	// 	err := NewHTTPError(http.StatusBadRequest, map[string]interface{}{
+	// 		"code": 12,
+	// 	})
+	// 	err.SetInternal(errors.New("internal error"))
+	// 	assert.Equal(t, "code=400, message=map[code:12], internal=internal error", err.Error())
+	// })
+}
+
+func TestEchoClose(t *testing.T) {
+	e := New()
+	errCh := make(chan error)
+
+	go func() {
+		errCh <- e.Start(":0")
+	}()
+
+	err := waitForServerStart(e, errCh, false)
+	assert.NoError(t, err)
+
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NoError(t, e.Close())
+
+	err = <-errCh
+	assert.Equal(t, err.Error(), "http: Server closed")
+}
