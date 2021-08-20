@@ -1,6 +1,7 @@
 package echo
 
 import (
+	stdContext "context"
 	"errors"
 	"fmt"
 	"net"
@@ -374,6 +375,15 @@ func (e *Echo) Close() error {
 	// 	return err
 	// }
 	return e.Server.Close()
+}
+
+func (e *Echo) Shutdown(ctx stdContext.Context) error {
+	// e.startupMutex.Lock()
+	// defer e.startupMutex.Unlock()
+	// if err := e.TLSServer.Shutdown(ctx); err != nil {
+	// 	return err
+	// }
+	return e.Server.Shutdown(ctx)
 }
 
 func NewHTTPError(code int, message ...interface{}) *HTTPError {

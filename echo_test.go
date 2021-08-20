@@ -205,3 +205,26 @@ func TestEchoClose(t *testing.T) {
 	err = <-errCh
 	assert.Equal(t, err.Error(), "http: Server closed")
 }
+
+func TestEchoShutdown(t *testing.T) {
+	e := New()
+	errCh := make(chan error)
+
+	go func() {
+		errCh <- e.Start(":0")
+	}()
+
+	err := waitForServerStart(e, errCh, false)
+	assert.NoError(t, err)
+
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := stdContext.WithTimeout(stdContext.Background(), 10*time.Second)
+	defer cancel()
+	assert.NoError(t, e.Shutdown(ctx))
+
+	err = <-errCh
+	assert.Equal(t, err.Error(), "http: Server closed")
+}
