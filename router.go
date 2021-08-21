@@ -163,7 +163,7 @@ func (n *node) checkMethodNotAllowed() HandlerFunc {
 
 func (r *Router) Find(method, path string, c Context) {
 	ctx := c.(*context)
-	// ctx.path = path
+	ctx.path = path
 	currentNode := r.tree // Current node as root
 
 	var (

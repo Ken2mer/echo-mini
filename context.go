@@ -35,7 +35,7 @@ type (
 		// 	RealIP() string
 
 		// Path returns the registered path for the handler.
-		// 	Path() string
+		Path() string
 
 		// SetPath sets the registered path for the handler.
 		// 	SetPath(p string)
@@ -86,10 +86,10 @@ type (
 		// 	Cookies() []*http.Cookie
 
 		// Get retrieves data from the context.
-		// 	Get(key string) interface{}
+		Get(key string) interface{}
 
 		// Set saves data in the context.
-		// 	Set(key string, val interface{})
+		Set(key string, val interface{})
 
 		// Bind binds the request body into provided type `i`. The default binder
 		// does it based on Content-Type header.
@@ -187,13 +187,13 @@ type (
 	context struct {
 		request  *http.Request
 		response *Response
-		// path     string
+		path     string
 		// pnames   []string
 		// pvalues  []string
 		query   url.Values
 		handler HandlerFunc
-		// store   Map
-		echo *Echo
+		store   Map
+		echo    *Echo
 		// logger   Logger
 		// lock     sync.RWMutex
 	}
@@ -220,11 +220,31 @@ func (c *context) Response() *Response {
 	return c.response
 }
 
+func (c *context) Path() string {
+	return c.path
+}
+
 func (c *context) QueryParams() url.Values {
 	if c.query == nil {
 		c.query = c.request.URL.Query()
 	}
 	return c.query
+}
+
+func (c *context) Get(key string) interface{} {
+	// c.lock.RLock()
+	// defer c.lock.RUnlock()
+	return c.store[key]
+}
+
+func (c *context) Set(key string, val interface{}) {
+	// c.lock.Lock()
+	// defer c.lock.Unlock()
+
+	if c.store == nil {
+		c.store = make(Map)
+	}
+	c.store[key] = val
 }
 
 func (c *context) String(code int, s string) (err error) {
